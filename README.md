@@ -7,7 +7,7 @@
 ![OpenRouter](https://img.shields.io/badge/Jev-OpenRouter-6566F1)
 ![Laya](https://img.shields.io/badge/Laya-0.4.2-FFD21E?logo=huggingface&logoColor=black)
 
-🔗 **Live demo:** _coming soon_
+🔗 **Live demo:** _coming soon_ · 📦 **Repository:** [github.com/lavanya1402/systemone-benchlab](https://github.com/lavanya1402/systemone-benchlab)
 
 ---
 
