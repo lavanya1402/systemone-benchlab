@@ -1,0 +1,10 @@
+﻿.env
+.venv/
+__pycache__/
+.pytest_cache/
+results/
+laya-output.txt
+laya-error.txt
+
+# Local scratch files
+laya-*.txt
