@@ -1,0 +1,55 @@
+{
+  "run_id": "v2-heldout_20261022T040618Z",
+  "source": "published",
+  "started_utc": "2026-10-22T04:06:18+00:00",
+  "finished_utc": "2026-10-22T04:09:52+00:00",
+  "dataset": {
+    "version": "v2-heldout",
+    "file": "datasets/v2_heldout.csv",
+    "sha256": "3e2e9e686b8121f3cef8fecb5ed50704004e21c65f7cdc06774423bb7340e329",
+    "cases_run": 60,
+    "flagged_for_review_skipped": 4
+  },
+  "prompt": {
+    "version": "policy-v1",
+    "fingerprint": "66f5f32271e1"
+  },
+  "models": {
+    "Laya": {
+      "system": "Laya (local checkpoint)",
+      "package_version": "0.4.2",
+      "served_by": [
+        "laya-rl-agent / english"
+      ],
+      "settings": {
+        "language": "en",
+        "device": "cpu",
+        "checkpoint_selection": "automatic (model=None)"
+      }
+    },
+    "Jev": {
+      "system": "Jev Router (routed system, not a single model)",
+      "requested_model": "typesafe/jev-router",
+      "served_by": [
+        "deepseek/deepseek-v4.1-flash-1017",
+        "openai/gpt-6-luna",
+        "z-ai/glm-5.3-flash"
+      ],
+      "providers": [
+        "Decart",
+        "OpenAI",
+        "Wafer"
+      ],
+      "settings": {
+        "temperature": 0,
+        "response_format": "strict JSON schema; decision enum",
+        "timeout_s": 60,
+        "retries": "up to 3 on HTTP 429"
+      }
+    }
+  },
+  "app_commit": "d548808 + uncommitted changes",
+  "notes": [
+    "Run with the benchlab code added in the same commit that published this folder; see the git history of this folder."
+  ]
+}

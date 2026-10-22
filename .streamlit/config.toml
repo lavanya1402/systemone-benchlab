@@ -1,0 +1,27 @@
+[theme]
+base = "light"
+primaryColor = "#1B2F55"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F4EE"
+textColor = "#0F1E3D"
+linkColor = "#2E5A9C"
+borderColor = "#E4DCC6"
+showWidgetBorder = true
+baseRadius = "8px"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+codeBackgroundColor = "#F6F4EE"
+dataframeHeaderBackgroundColor = "#F6F4EE"
+
+greenColor = "#1A7F37"
+orangeColor = "#A15C00"
+redColor = "#B42318"
+blueColor = "#2E5A9C"
+yellowColor = "#8A6514"
+yellowBackgroundColor = "#F7EFD9"
+
+# Laya blue, Jev gold: checked for colour-blind separation and contrast.
+chartCategoricalColors = ["#2E5A9C", "#B8892B", "#57606A"]
+chartSequentialColors = ["#F3F6FB", "#DCE5F2", "#BFD0E8", "#9DB6DA", "#7A9BCB", "#5A80BA", "#3F67A6", "#2E5A9C", "#1F4278", "#142C52"]

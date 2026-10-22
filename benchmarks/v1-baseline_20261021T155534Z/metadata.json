@@ -1,0 +1,56 @@
+{
+  "run_id": "v1-baseline_20261021T155534Z",
+  "source": "published",
+  "started_utc": "2026-10-21T15:55:34+00:00",
+  "finished_utc": null,
+  "dataset": {
+    "version": "v1-baseline",
+    "file": "datasets/v1_baseline.csv",
+    "sha256": "7943fd9623f4fdaf94a5c5638ab12f10e6bf878d9a02b28463cd53eaaef71835",
+    "cases_run": 48,
+    "flagged_for_review_skipped": 0
+  },
+  "prompt": {
+    "version": "policy-v1",
+    "fingerprint": "66f5f32271e1"
+  },
+  "models": {
+    "Laya": {
+      "system": "Laya (local checkpoint)",
+      "package_version": "0.4.2",
+      "served_by": [
+        "laya-rl-agent / english"
+      ],
+      "settings": {
+        "language": "en",
+        "device": "cpu",
+        "checkpoint_selection": "automatic (model=None)"
+      }
+    },
+    "Jev": {
+      "system": "Jev Router (routed system, not a single model)",
+      "requested_model": "typesafe/jev-router",
+      "served_by": [
+        "deepseek/deepseek-v4.1-flash-1017",
+        "openai/gpt-6-luna",
+        "z-ai/glm-5.3-flash"
+      ],
+      "providers": [
+        "Decart",
+        "OpenAI",
+        "Wafer"
+      ],
+      "settings": {
+        "temperature": 0,
+        "response_format": "strict JSON schema; decision enum",
+        "timeout_s": 120,
+        "retries": "up to 3 on HTTP 429"
+      }
+    }
+  },
+  "app_commit": null,
+  "notes": [
+    "Run made before the repository existed. Metadata was reconstructed on 2026-10-22 from the saved per-case results and raw responses.",
+    "Finish time and app commit were not recorded."
+  ]
+}

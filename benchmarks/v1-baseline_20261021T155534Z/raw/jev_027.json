@@ -1,0 +1,61 @@
+{
+  "id": "gen-1792598278-ZDV6wVmnjXcevE6VmcZH",
+  "object": "chat.completion",
+  "created": 1792598279,
+  "model": "openai/gpt-6-luna",
+  "provider": "OpenAI",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "completed",
+      "message": {
+        "role": "assistant",
+        "content": "{\"decision\":\"REQUIRE_APPROVAL\"}",
+        "refusal": null,
+        "reasoning": "**Clarifying output schema**\n\nI realize we need a clear structure for our output schema. The term \"approval pending\" suggests that something is missing or requires further approval. It's essential to establish this framework so we can manage expectations. I'm wondering if we should include specific categories to indicate what is pending or missing. Overall, I want to make sure we create a thorough and understandable output schema. Let's refine this together!",
+        "reasoning_details": [
+          {
+            "type": "reasoning.summary",
+            "summary": "**Clarifying output schema**\n\nI realize we need a clear structure for our output schema. The term \"approval pending\" suggests that something is missing or requires further approval. It's essential to establish this framework so we can manage expectations. I'm wondering if we should include specific categories to indicate what is pending or missing. Overall, I want to make sure we create a thorough and understandable output schema. Let's refine this together!",
+            "format": "openai-responses-v1",
+            "index": 0
+          },
+          {
+            "type": "reasoning.encrypted",
+            "data": "gAAAAABq2OEJO2NBlZugRo-TvvbBJE8DyKavWGVqd9omTxvUf2yCDxmoYwvPfpXurdRuBzleW9Z1coZEqYJtPkRZwyy7hM-4PK89IEvNizCsVgK6ujAwnOWg639cPpzDhh7vEHzKaXago-Y9yY00bMLXlLLhKENc5WrNrZHk6Nxjq2vbUbmJhFwJ-RAmGK--JT3X5QcnMUu43okcRO3TAHdIB0LISuGrhvEVzXvsqGQlABxT3rNFn50T3pX64auFwy9u7xsyv4zLhy7tCqToPIJIXb4iA6Crwsu5mgGVTn0lhGSzEszT4flUhg09Qt5l3VYrT3beHpfG-0C45_xBir-mz9O2-qxJexSHJzO4fkxHnxaySwEW6pmgYS4uBh-T6ufH2kpLYz1UnbKzem0S6fv1Th_ROJ1ourd5hEkb-zoVx_Fu_7RP2JOGd9Jj-DD3UGQKA5LJUzmEFw1hIBSXkOStKCFq2Jmd0bSOroC15-0wiLwJnbRAHSRdpATzHTM0U6KR-m0WObQy9r3COsB88SLHtT-aQ4HjBxpZiZViNvP35Q8EYTfgtnff-w8zMFxmQUBnGd3Eh8dG-o_4SghvegnvJVW8v1c39mIHLk_eRi8g9gUBZmfEv-NdXCJAz3Wgp54WoRgnb-ZQeaiQjb7bRa0CH_XCYCom7k2ldcJlKNs23JEEG-g2alIiL0SuSAbvhzlaPFq8RW6j_jjeBb4QqPXjvVuE1NHrA5uLtbk-GNlHWyslUjvb2KKJjb-eATdtSxa6hAUVQXvQ22crxG4khnzbuC3So2EslGUWL7yP33tYlDuqjFi4fRGkhMf_7jVDn444jPCU6i4dgYZXFIxrG-hJ8X_Degy6z7LCSXbgvmh5GKBMKxftwznzcBn8mK1NPg9Gh3Ka9O3k7dNxZsCBKlt4tWsumOzSOSkdDBVKavn9vDnve5FM5smLKftRjMRV87fep5Gv4TVBudNpIZh5wJDypfAQ1ECBj0sS_VvCc-EOgqCXHSyyQaw_KwPAbrf20b5dz9854GMT1ts-DVK6noYdNu_D6M_n_VdoxE0DPVjjePzZM6y8Igq1wM16cXKvgDF5ZZZZnyve8cDvfnLSW7x4JAqWMpvCg8N-2caVgH_U3fqpKj2ElhcwfQe86-ZLQl_u-X46hlp78mQs5DCG8W-nYG5UICOgyDyBW8EULbiRhR_H3JCKtrRZ8-ySfb9Nyi5dDQi2hYkkUvVbFRzhYW0sDJ913D-5XgGC_ftgC5XyAteNToAEvhs8Ls3fZT-HHgJ-7FZXQHkw58QGX72mLlV8UI-8jYGeSf2AEzGyRKn0BJuG3w_g48FG8ZlrsKSBV1_Zmij6YlVv8LfS9qrh--FRmH86p-Bz-TavLs_J9GJJbcMACMwLgJ1983rBjLA5MKQc9i4OvGZ6jrMgn92ked7mDYl-hO8ngq-PlXYjccNk3an9zQEo-ImuM8OWy8XV1WTdnsaQr3v_guFuJjcWcuI2MHV3aUFc-ImFzbV7jx0JJUl3TVXe1I2Lt4wZR57fXleKwGDHNUdnzemLTaAfVviwaxfVSgUoDJqEg7FC4IZYzR9NslU7paS0IJMJ4UMlLL1_dugsXqCI1RZwVshyIO--uqP2vzETpBATZxZFdB5KPupNp4XDtubZq_cvyHI5F7hKF6B1W1F2aQzs1BW0s3C8d0lMb364sL6nZRNj0As2J4YBQ07QuJu8eE5wbnFhncO34Qx5FU5qPSxLuzr_CaKw9NyhRzdEtUKHQgVJR0wju42AC3cTW97IOnGDeC0KV68abR1MRXxua83bMOv-QDR8lChEgPshBw==.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC02LWx1bmEtMjAyNjA5MjJ8b3BlbmFpIn0",
+            "format": "openai-responses-v1",
+            "id": "rs_0719739874b6bc9f016ad8e1085b9c87d1824d2aa12d470a78",
+            "index": 1
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 188,
+    "completion_tokens": 36,
+    "total_tokens": 224,
+    "cost": 3.68e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 3.68e-05,
+      "upstream_inference_prompt_cost": 1.88e-05,
+      "upstream_inference_completions_cost": 1.8e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 17,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

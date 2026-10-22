@@ -1,0 +1,54 @@
+{
+  "id": "gen-1792642140-Li7icl0f75UMQZnfEzAk",
+  "object": "chat.completion",
+  "created": 1792642140,
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "Wafer",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"decision\": \"BLOCK\"}",
+        "refusal": null,
+        "reasoning": "Friday 6 PM after 4 PM \u2014 prohibited regardless of approval.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Friday 6 PM after 4 PM \u2014 prohibited regardless of approval.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 175,
+    "completion_tokens": 22,
+    "total_tokens": 197,
+    "cost": 1.5866e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 106,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 1.5866e-05,
+      "upstream_inference_prompt_cost": 1.1466e-05,
+      "upstream_inference_completions_cost": 4.4e-06
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 15,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

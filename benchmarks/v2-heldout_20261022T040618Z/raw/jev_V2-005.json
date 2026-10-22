@@ -1,0 +1,54 @@
+{
+  "id": "gen-1792642107-nXLNYbfP5q4dT4twQiX2",
+  "object": "chat.completion",
+  "created": 1792642108,
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "provider": "Decart",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"decision\": \"REQUIRE_APPROVAL\"}",
+        "refusal": null,
+        "reasoning": "We need answer JSON only. Need decide. Policy: up to 2000 no approval. Above require written approval from supervisor. Proposed refund 6500. Context supervisor approved 3000 on order 4416. Does approval cover 6500? No, written approval for 3000, not 6500. Action not prohibited, but required approval missing for amount above 2000? There is approval but insufficient amount. So REQUIRE_APPROVAL. Need only JSON.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "We need answer JSON only. Need decide. Policy: up to 2000 no approval. Above require written approval from supervisor. Proposed refund 6500. Context supervisor approved 3000 on order 4416. Does approval cover 6500? No, written approval for 3000, not 6500. Action not prohibited, but required approval missing for amount above 2000? There is approval but insufficient amount. So REQUIRE_APPROVAL. Need only JSON.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 318,
+    "completion_tokens": 112,
+    "total_tokens": 430,
+    "cost": 4.878e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 4.878e-05,
+      "upstream_inference_prompt_cost": 2.862e-05,
+      "upstream_inference_completions_cost": 2.016e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 103,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

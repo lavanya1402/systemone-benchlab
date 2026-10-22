@@ -1,0 +1,54 @@
+{
+  "id": "gen-1792642169-YXAiDdLmLcOLqaAo7uAf",
+  "object": "chat.completion",
+  "created": 1792642169,
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "Wafer",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"decision\": \"REQUIRE_APPROVAL\"}",
+        "refusal": null,
+        "reasoning": "Export 50,000 requires approval; approval was for 5,000, not 50,000. So approval missing \u2192 REQUIRE_APPROVAL.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Export 50,000 requires approval; approval was for 5,000, not 50,000. So approval missing \u2192 REQUIRE_APPROVAL.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 174,
+    "completion_tokens": 41,
+    "total_tokens": 215,
+    "cost": 1.9592e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 106,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 1.9592e-05,
+      "upstream_inference_prompt_cost": 1.1392e-05,
+      "upstream_inference_completions_cost": 8.2e-06
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 31,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

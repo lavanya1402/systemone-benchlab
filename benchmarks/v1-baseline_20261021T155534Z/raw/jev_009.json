@@ -1,0 +1,46 @@
+{
+  "id": "gen-1792598237-ICOgueowArhNXuNyA91r",
+  "object": "chat.completion",
+  "created": 1792598238,
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "Wafer",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"decision\": \"BLOCK\"}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 147,
+    "completion_tokens": 8,
+    "total_tokens": 155,
+    "cost": 1.0273e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 1.0273e-05,
+      "upstream_inference_prompt_cost": 8.673e-06,
+      "upstream_inference_completions_cost": 1.6e-06
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 1,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}
