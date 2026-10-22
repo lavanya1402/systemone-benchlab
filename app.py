@@ -39,8 +39,8 @@ reload_changed_benchlab_modules()
 
 from benchlab import metrics  # noqa: E402
 from benchlab.config import (
-    DATASETS, DECISION_INFO, DECISIONS, JEV_DEFAULT_MODEL, JEV_MAX_ATTEMPTS,
-    JEV_TIMEOUT_S, MODEL_COLORS, MODELS, NO_DECISION, PROMPT_VERSION,
+    DATASETS, DECISION_INFO, DECISIONS, JEV_DEFAULT_MODEL, MODEL_COLORS,
+    MODELS, NO_DECISION, PROMPT_VERSION,
     RAW_PREFIXES, ROOT, TYPESAFE_DEFAULT_MODEL, TYPESAFE_MAX_ATTEMPTS,
     TYPESAFE_TIMEOUT_S, model_label, prompt_fingerprint,
 )
@@ -83,17 +83,13 @@ SETTINGS = {
     "openrouter_api_key": secret("OPENROUTER_API_KEY"),
     "jev_router_model": secret("JEV_MODEL", JEV_DEFAULT_MODEL),
 }
-# Jev Router is kept for comparison with the historical runs; the default
-# live comparison is Laya against Jev direct.
-DEFAULT_RUN_MODELS = ["Laya", "Jev Direct"]
+# The app compares two models. Earlier Laya vs Jev Router runs stay in
+# benchmarks/ and the README, and an uploaded file may still contain them,
+# but they are not shown or offered here.
+APP_MODELS = ["Laya", "Jev Direct"]
+DEFAULT_RUN_MODELS = APP_MODELS
 MODEL_BY_LABEL = {model_label(m): m for m in MODELS}
-# Jev Router stays in the published results but is offered for live runs
-# only when its key is configured. Jev direct is always offered so a
-# missing TypeSafe key produces a clear warning.
-RUNNABLE_BY_LABEL = {
-    label: model for label, model in MODEL_BY_LABEL.items()
-    if model != "Jev Router" or not missing_credential(model, SETTINGS)
-}
+RUNNABLE_BY_LABEL = {model_label(m): m for m in APP_MODELS}
 
 
 def credential_warning(model_name):
@@ -116,7 +112,7 @@ METRIC_HELP = {
                  "BLOCK, so each decision type counts equally. Ranges 0 to 1."),
     "latency": ("Median time per successful request, excluding each model's "
                 "first request, which can include loading. Laya runs on local "
-                "CPU; Jev and Jev Router include the network round trip."),
+                "CPU; Jev includes the network round trip."),
     "failed": ("Requests that timed out or returned an API or network error. "
                "Recorded, never converted into a decision."),
     "invalid": ("Responses that could not be parsed into one of the three "
@@ -595,7 +591,9 @@ overview_tab, dataset_tab, run_tab, results_tab = st.tabs([
     ":material/analytics: Results & error analysis",
 ])
 
-published_runs = cached_published_runs()
+# Only runs of the two app models are shown; Jev Router runs stay on disk.
+published_runs = [(path, meta) for path, meta in cached_published_runs()
+                  if set(meta.get("models", {})) <= set(APP_MODELS)]
 
 with overview_tab:
     st.header("Evaluate whether AI systems follow business policies before "
@@ -630,24 +628,19 @@ with overview_tab:
         )
 
     st.subheader("The systems compared")
-    systems = st.columns(3)
+    systems = st.columns(2)
     with systems[0].container(border=True, height="stretch"):
         st.markdown(f"**{model_label('Laya')}**")
         st.markdown("Open-source local checkpoint, run on CPU. Answers the "
                     "decision as a native choice question.")
     with systems[1].container(border=True, height="stretch"):
         st.markdown(f"**{model_label('Jev Direct')}**")
-        st.markdown("TypeSafe's own Jev model through its System One API. "
-                    "Answers the identical choice question; no LLM is "
-                    "involved.")
-    with systems[2].container(border=True, height="stretch"):
-        st.markdown(f"**{model_label('Jev Router')}**")
-        st.markdown("`typesafe/jev-router` on OpenRouter, which routes each "
-                    "request to an underlying LLM. Used by the earlier "
-                    "published runs; not the direct Jev model.")
-        if missing_credential("Jev Router", SETTINGS):
-            st.caption("Historical results only: no OpenRouter key is "
-                       "configured, so it is not run live here.")
+        st.markdown("TypeSafe's own Jev model through its System One API, "
+                    "pinned to `jev-1.13.0`. Answers the identical choice "
+                    "question; no LLM is involved.")
+    st.caption("Earlier runs compared Laya with Jev Router, an OpenRouter "
+               "model that routes requests to general LLMs. They are kept in "
+               "the GitHub repository and README but are not shown here.")
 
     headline = next((item for item in published_runs
                      if item[1]["dataset"]["version"] == "v2-heldout"),
@@ -668,9 +661,8 @@ with overview_tab:
         "- **Only the case text is sent:** policy, proposed action and "
         "context. Case IDs, expected answers, scenarios and review notes "
         "never reach a model.\n"
-        "- **Constrained answers:** Laya and Jev direct answer the identical "
-        "native choice question; Jev Router must return JSON whose decision "
-        "is one of the three labels.\n"
+        "- **Identical question:** Laya and Jev answer the same native "
+        "choice question with exactly three options.\n"
         "- **Held-out data:** the v2 set was written after the prompt was "
         "frozen, and the prompt was not changed afterwards.\n"
         "- **No hidden failures:** timeouts, API errors and unparseable "
@@ -678,22 +670,21 @@ with overview_tab:
         "- **Ambiguous cases are flagged, not guessed:** cases without one "
         "defensible answer are excluded from scoring.\n"
         "- **What answered is recorded:** the model version that answered "
-        "each request is stored. Jev Router may use a different underlying "
-        "model per request.\n"
+        "each request is stored.\n"
         "- **Nothing simulated:** every number comes from a real run."
     )
     with st.expander("Limitations", icon=":material/warning:"):
         st.markdown(
             "- Cases are synthetic and hand-written; real policies are "
             "messier.\n"
-            "- Sample sizes are small (48 and 60 scored cases), so differences "
-            "of a few cases are not meaningful.\n"
-            "- Jev Router's results depend on which models it routed to at "
-            "run time and may change over time.\n"
+            "- The sample is small (60 scored cases), so differences of a few "
+            "cases are not meaningful.\n"
+            "- Laya was used out of the box, without fine-tuning for this "
+            "task.\n"
             "- Laya's checkpoint warns that some of its temperatures are "
             "invalid, so its reported confidence is uncalibrated.\n"
-            "- Latency is indicative only: Laya runs on CPU here, while both "
-            "Jev systems include the network round trip."
+            "- Latency is indicative only: Laya runs on CPU here, while Jev "
+            "includes the network round trip."
         )
 
 with dataset_tab:
@@ -804,11 +795,6 @@ with run_tab:
                  f"native choice question · timeout {TYPESAFE_TIMEOUT_S} s · "
                  f"up to {TYPESAFE_MAX_ATTEMPTS - 1} retries on HTTP 429/529 · "
                  "$0.042 per million input tokens (documented)"),
-                (model_label("Jev Router"),
-                 f"{SETTINGS['jev_router_model']} via OpenRouter (routed) · "
-                 f"temperature 0 · strict JSON schema · timeout "
-                 f"{JEV_TIMEOUT_S} s · up to {JEV_MAX_ATTEMPTS - 1} retries "
-                 "on HTTP 429"),
             ], columns=["Setting", "Value"]), hide_index=True,
                 alt="Settings used for a live run")
             st.caption("Laya's first request downloads and loads its "
