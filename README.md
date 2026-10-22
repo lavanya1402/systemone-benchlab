@@ -46,9 +46,35 @@ Every system receives only the policy, proposed action and context. Case IDs, ex
 
 > ⚠️ Results apply to this dataset and run; they do not establish universal reliability.
 
-> ℹ️ Both published runs compare Laya with **Jev Router**, not the direct Jev decision model. A full Laya vs Jev direct run has not been published yet; so far Jev direct has only passed a one-case integration test.
+### ⭐ Laya vs Jev — direct decision model: v2 held-out, 60 scored cases, 22 Oct 2026 (main result)
 
-### v2 held-out set: 60 scored cases, 22 Oct 2026 (Laya vs Jev Router)
+| Metric | 🟦 Laya | 🟩 Jev — direct decision model |
+|---|---|---|
+| Accuracy | 55.0% (33/60) | **100% (60/60)** |
+| Macro F1 | 0.476 | **1.000** |
+| ✅ ALLOW recall | 17/20 | **20/20** |
+| ⛔ BLOCK recall | 15/20 | **20/20** |
+| ✋ REQUIRE_APPROVAL recall | 1/20 | **20/20** |
+| Median latency¹ | 1.3 s (local CPU) | **0.41 s** (network) |
+| Failed requests / invalid outputs | 0 / 0 | 0 / 0 |
+| Cost | Free (local) | ≈ $0.0012 (estimated²) |
+| Model that answered | `laya-rl-agent` (english) | `jev-1.13.0` on every request |
+
+| Critical error | Laya | Jev direct |
+|---|---|---|
+| Approval required → ALLOW | **16 of 20** | 0 of 20 |
+| Prohibited → ALLOW | **5 of 20** | 0 of 20 |
+| Permitted → BLOCK | 2 of 20 | 0 of 20 |
+
+<sub>² TypeSafe does not return a cost: 28,078 input tokens at the documented $0.042 per million input tokens (output free).</sub>
+
+Both systems answered the **identical** native choice question. Laya was used out of the box, without fine-tuning for this task. Raw responses for all 120 requests are in [`benchmarks/v2-heldout_20261022T063940Z`](benchmarks/v2-heldout_20261022T063940Z).
+
+### Earlier runs: Laya vs Jev Router
+
+> ℹ️ These runs used **Jev Router** (`typesafe/jev-router` on OpenRouter), which routes each request to an underlying LLM. They are kept as published and are not direct Jev results.
+
+#### v2 held-out set: 60 scored cases, 22 Oct 2026 (Laya vs Jev Router)
 
 | Metric | 🟦 Laya | 🟨 Jev Router |
 |---|---|---|
@@ -69,7 +95,7 @@ Every system receives only the policy, proposed action and context. Case IDs, ex
 | Prohibited → ALLOW | Performs a prohibited action | **5 of 20** | 0 of 20 |
 | Permitted → BLOCK | Refuses a permitted action | 2 of 20 | 0 of 20 |
 
-### v1 baseline: 48 cases, 21 Oct 2026 (Laya vs Jev Router, preserved)
+#### v1 baseline: 48 cases, 21 Oct 2026 (Laya vs Jev Router, preserved)
 
 | Metric | 🟦 Laya | 🟨 Jev Router |
 |---|---|---|
@@ -82,6 +108,8 @@ Every system receives only the policy, proposed action and context. Case IDs, ex
 
 ### 🔍 Findings
 
+- **Jev direct answered every held-out case correctly.** It got 60 of 60 with the same native question Laya received, all answered by `jev-1.13.0`, at a median of 0.41 s per request.
+- **Laya's answers were reproducible.** Its 60 decisions in the Jev direct run were identical to its earlier run against Jev Router.
 - **Missed approvals are consistent.** Laya answered ALLOW for most approval-required actions in both sets (18/24 and 16/20). That covered expired, wrong-person, partial and mismatched approvals as well as missing ones.
 - **The held-out set exposed a second failure.** Laya blocked every prohibited action in v1, but in v2 it allowed 5 of 20, including a Friday-evening production deploy, audit-log deletion and a gift to a tax inspector.
 - **Jev Router is a routed system.** It sent requests to `z-ai/glm-5.3-flash` (55), `openai/gpt-6-luna` (4) and `deepseek/deepseek-v4.1-flash-1017` (1). Its results describe the routed system on this run, not any single model.

@@ -1,0 +1,46 @@
+{
+  "run_id": "v2-heldout_20261022T063940Z",
+  "source": "published",
+  "started_utc": "2026-10-22T06:39:40+00:00",
+  "finished_utc": "2026-10-22T06:41:46+00:00",
+  "dataset": {
+    "version": "v2-heldout",
+    "file": "datasets/v2_heldout.csv",
+    "sha256": "3e2e9e686b8121f3cef8fecb5ed50704004e21c65f7cdc06774423bb7340e329",
+    "cases_run": 60,
+    "flagged_for_review_skipped": 4
+  },
+  "prompt": {
+    "version": "policy-v1",
+    "fingerprint": "66f5f32271e1"
+  },
+  "models": {
+    "Laya": {
+      "system": "Laya (local checkpoint)",
+      "package_version": "0.4.2",
+      "served_by": [
+        "laya-rl-agent / english"
+      ],
+      "settings": {
+        "language": "en",
+        "device": "cpu",
+        "checkpoint_selection": "automatic (model=None)"
+      }
+    },
+    "Jev Direct": {
+      "system": "Jev \u2014 direct decision model (TypeSafe System One API)",
+      "requested_model": "jev-1.13.0",
+      "served_by": [
+        "jev-1.13.0"
+      ],
+      "endpoint": "https://api.typesafe.ai/v1/systemone",
+      "settings": {
+        "question": "native choice question, identical to Laya's",
+        "timeout_s": 60,
+        "retries": "up to 3 on HTTP 429/529"
+      },
+      "cost": "Not returned by the API. Estimated at $0.001179 from input tokens at the documented $0.042 per million input tokens (output free)."
+    }
+  },
+  "app_commit": "6ed26b9"
+}
