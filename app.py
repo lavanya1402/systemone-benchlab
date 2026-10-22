@@ -1,5 +1,8 @@
+import hashlib
+import importlib
 import json
 import os
+import sys
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,7 +12,32 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-from benchlab import metrics
+
+# Dependency order: later modules import from earlier ones.
+BENCHLAB_MODULES = ("benchlab.config", "benchlab.data", "benchlab.runners",
+                    "benchlab.metrics", "benchlab.results")
+
+
+def source_digest(module):
+    return hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
+
+
+def reload_changed_benchlab_modules():
+    """Reload benchlab modules whose source changed since they were imported.
+
+    Streamlit Cloud reruns app.py after a git pull but keeps modules it has
+    already imported, so new names would otherwise raise ImportError.
+    """
+    for name in BENCHLAB_MODULES:
+        module = sys.modules.get(name)
+        if module is not None and getattr(
+                module, "_source_digest", None) != source_digest(module):
+            importlib.reload(module)
+
+
+reload_changed_benchlab_modules()
+
+from benchlab import metrics  # noqa: E402
 from benchlab.config import (
     DATASETS, DECISION_INFO, DECISIONS, JEV_DEFAULT_MODEL, JEV_MAX_ATTEMPTS,
     JEV_TIMEOUT_S, MODEL_COLORS, MODELS, NO_DECISION, PROMPT_VERSION,
@@ -24,6 +52,10 @@ from benchlab.runners import (
     build_metadata, estimated_cost_usd, laya_router, laya_version,
     missing_credential, results_frame, run_case, run_cases, save_run,
 )
+
+# Record what was loaded so the next rerun only reloads changed modules.
+for _name in BENCHLAB_MODULES:
+    sys.modules[_name]._source_digest = source_digest(sys.modules[_name])
 
 st.set_page_config(
     page_title="SystemOne BenchLab",
