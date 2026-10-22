@@ -68,6 +68,10 @@ Every system receives only the policy, proposed action and context. Case IDs, ex
 
 <sub>² TypeSafe does not return a cost: 28,078 input tokens at the documented $0.042 per million input tokens (output free).</sub>
 
+![Critical errors and recall by expected decision: Laya vs Jev direct decision model in the live app](docs/screenshots/laya-vs-jev-direct-critical-errors.png)
+
+<sub>From the live app's **Results & error analysis** tab. Laya answered only 5% of approval-required cases correctly; Jev direct answered 100% in every class.</sub>
+
 Both systems answered the **identical** native choice question. Laya was used out of the box, without fine-tuning for this task. Raw responses for all 120 requests are in [`benchmarks/v2-heldout_20261022T063940Z`](benchmarks/v2-heldout_20261022T063940Z).
 
 ### Earlier runs: Laya vs Jev Router
