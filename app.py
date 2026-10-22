@@ -306,7 +306,7 @@ def recall_chart(results):
         ],
     )
     bars = base.mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-        y=alt.Y("recall:Q", title="Recall (share answered correctly)",
+        y=alt.Y("recall:Q", title="Recall",
                 scale=alt.Scale(domain=[0, 1]), axis=alt.Axis(format="%")),
         color=alt.Color("model:N", title="Model", scale=alt.Scale(
             domain=domain, range=colors),
@@ -323,13 +323,15 @@ def confusion_chart(rows):
     peak = max(int(data["count"].max()), 1)
     base = alt.Chart(data).encode(
         x=alt.X("predicted:N", sort=columns, title="Predicted decision",
-                axis=alt.Axis(labelAngle=-20, orient="top", labelLimit=0)),
+                axis=alt.Axis(labelAngle=-30, orient="top", labelLimit=0,
+                              labelOverlap=False)),
         y=alt.Y("expected:N", sort=DECISIONS, title="Expected decision",
                 axis=alt.Axis(labelLimit=0)),
     )
     cells = base.mark_rect(stroke="#FFFFFF", strokeWidth=2).encode(
         color=alt.Color("count:Q", title="Cases",
-                        scale=alt.Scale(scheme="blues", domain=[0, peak])),
+                        scale=alt.Scale(scheme="blues", domain=[0, peak]),
+                        legend=alt.Legend(gradientLength=140)),
         tooltip=[alt.Tooltip("expected:N", title="Expected"),
                  alt.Tooltip("predicted:N", title="Predicted"),
                  alt.Tooltip("count:Q", title="Cases")],
