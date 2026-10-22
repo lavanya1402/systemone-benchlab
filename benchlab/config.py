@@ -7,7 +7,26 @@ ROOT = Path(__file__).resolve().parent.parent
 
 DECISIONS = ["ALLOW", "REQUIRE_APPROVAL", "BLOCK"]
 NO_DECISION = "NO_DECISION"  # failed request or invalid output
-MODELS = ["Laya", "Jev"]
+
+# "Jev Direct" calls TypeSafe's own decision API. "Jev Router" is the
+# OpenRouter model typesafe/jev-router, which routes to other LLMs; every
+# historical run used it, and older files call it plain "Jev".
+MODELS = ["Laya", "Jev Direct", "Jev Router"]
+MODEL_LABELS = {
+    "Laya": "Laya",
+    "Jev Direct": "Jev — direct decision model",
+    "Jev Router": "Jev Router",
+}
+LEGACY_MODEL_NAMES = {"Jev": "Jev Router"}
+RAW_PREFIXES = {
+    "Laya": ["laya"],
+    "Jev Direct": ["jev-direct"],
+    "Jev Router": ["jev-router", "jev"],
+}
+
+
+def model_label(model):
+    return MODEL_LABELS.get(model, model)
 
 DECISION_INFO = {
     "ALLOW": {"meaning": "The action is permitted.", "color": "green",
@@ -18,8 +37,10 @@ DECISION_INFO = {
               "icon": ":material/block:"},
 }
 
-# Validated with the dataviz palette checker (CVD and contrast pass).
-MODEL_COLORS = {"Laya": "#2E5A9C", "Jev": "#B8892B"}
+# Validated with the dataviz palette checker (all pairs pass CVD and
+# contrast). Jev Router keeps the gold the historical runs always used.
+MODEL_COLORS = {"Laya": "#2E5A9C", "Jev Direct": "#1B8A73",
+                "Jev Router": "#B8892B"}
 
 # The prompt is frozen: v2-heldout was written after this text and the
 # prompt was not changed afterwards. Change PROMPT_VERSION if you edit it.
@@ -50,10 +71,19 @@ POLICY_QUESTIONS = {
     }
 }
 
-JEV_DEFAULT_MODEL = "typesafe/jev-router"
+JEV_DEFAULT_MODEL = "typesafe/jev-router"  # Jev Router, via OpenRouter
 JEV_TIMEOUT_S = 60
 JEV_MAX_ATTEMPTS = 4
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# Jev direct: TypeSafe System One API (docs.typesafe.ai/api/system-one).
+# Pinned to a versioned ID; the jev-latest alias moves between releases.
+TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone"
+TYPESAFE_DEFAULT_MODEL = "jev-1.13.0"
+TYPESAFE_TIMEOUT_S = 60
+TYPESAFE_MAX_ATTEMPTS = 4
+# docs.typesafe.ai/models, read 2026-10-22: input tokens only.
+TYPESAFE_USD_PER_INPUT_TOKEN = 0.042 / 1_000_000
 
 DATASETS = {
     "v2-heldout": {

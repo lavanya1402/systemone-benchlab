@@ -2,11 +2,12 @@
 
 **Evaluate whether AI systems follow business policies before taking action.**
 
-A Lavanya AI Consultancy evaluation demo comparing **Laya** and **Jev** as gatekeepers for AI agent actions.
+A Lavanya AI Consultancy evaluation demo comparing **Laya** with **Jev — direct decision model** (TypeSafe's own API) as gatekeepers for AI agent actions. The earlier published runs used **Jev Router**, a different, LLM-routed system.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/streamlit-1.65%2B-FF4B4B?logo=streamlit&logoColor=white)
-![OpenRouter](https://img.shields.io/badge/Jev-OpenRouter-6566F1)
+![TypeSafe](https://img.shields.io/badge/Jev-TypeSafe_API-1B8A73)
+![OpenRouter](https://img.shields.io/badge/Jev_Router-OpenRouter-6566F1)
 ![Laya](https://img.shields.io/badge/Laya-0.4.2-FFD21E?logo=huggingface&logoColor=black)
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://jev-vs-laya.streamlit.app/)
 
@@ -29,15 +30,27 @@ The app keeps two kinds of testing separate:
 - **Business policy benchmark (main evaluation):** policy + proposed action + context → one of the three decisions, scored against a labelled answer.
 - **General safety check (Laya only):** Laya's built-in categories (jailbreak, prompt injection, sensitive data, harm, topic). It does **not** apply any business policy and is not a measure of policy compliance.
 
+## 🤖 Systems compared
+
+| System | What it is | How it answers |
+|---|---|---|
+| 🟦 **Laya** | Local open-source checkpoint (laya 0.4.2), run on CPU | Native choice question |
+| 🟩 **Jev — direct decision model** | TypeSafe's Jev via its [System One API](https://docs.typesafe.ai/api/system-one), pinned to `jev-1.13.0` | The **identical** native choice question Laya receives; no LLM involved |
+| 🟨 **Jev Router** | `typesafe/jev-router` on OpenRouter, which routes each request to an underlying LLM | Strict JSON with one of the three labels |
+
+Every system receives only the policy, proposed action and context. Case IDs, expected answers, scenarios and review notes are never sent.
+
 ---
 
 ## 📊 Published results
 
 > ⚠️ Results apply to this dataset and run; they do not establish universal reliability.
 
-### v2 held-out set: 60 scored cases, 22 Oct 2026 (main result)
+> ℹ️ Both published runs compare Laya with **Jev Router**, not the direct Jev decision model. A full Laya vs Jev direct run has not been published yet; so far Jev direct has only passed a one-case integration test.
 
-| Metric | 🟦 Laya | 🟨 Jev |
+### v2 held-out set: 60 scored cases, 22 Oct 2026 (Laya vs Jev Router)
+
+| Metric | 🟦 Laya | 🟨 Jev Router |
 |---|---|---|
 | Accuracy | 55.0% (33/60) | **100% (60/60)** |
 | Macro F1 | 0.476 | **1.000** |
@@ -50,15 +63,15 @@ The app keeps two kinds of testing separate:
 
 **Critical errors** (count out of cases with that correct answer):
 
-| Error | What it means | Laya | Jev |
+| Error | What it means | Laya | Jev Router |
 |---|---|---|---|
 | Approval required → ALLOW | Acts without the required sign-off | **16 of 20** | 0 of 20 |
 | Prohibited → ALLOW | Performs a prohibited action | **5 of 20** | 0 of 20 |
 | Permitted → BLOCK | Refuses a permitted action | 2 of 20 | 0 of 20 |
 
-### v1 baseline: 48 cases, 21 Oct 2026 (preserved)
+### v1 baseline: 48 cases, 21 Oct 2026 (Laya vs Jev Router, preserved)
 
-| Metric | 🟦 Laya | 🟨 Jev |
+| Metric | 🟦 Laya | 🟨 Jev Router |
 |---|---|---|
 | Accuracy | 58.3% (28/48) | **100% (48/48)** |
 | Macro F1 | 0.601 | **1.000** |
@@ -71,7 +84,7 @@ The app keeps two kinds of testing separate:
 
 - **Missed approvals are consistent.** Laya answered ALLOW for most approval-required actions in both sets (18/24 and 16/20). That covered expired, wrong-person, partial and mismatched approvals as well as missing ones.
 - **The held-out set exposed a second failure.** Laya blocked every prohibited action in v1, but in v2 it allowed 5 of 20, including a Friday-evening production deploy, audit-log deletion and a gift to a tax inspector.
-- **Jev is a routed system.** Jev Router sent requests to `z-ai/glm-5.3-flash` (55), `openai/gpt-6-luna` (4) and `deepseek/deepseek-v4.1-flash-1017` (1). Its results describe the routed system on this run, not any single model.
+- **Jev Router is a routed system.** It sent requests to `z-ai/glm-5.3-flash` (55), `openai/gpt-6-luna` (4) and `deepseek/deepseek-v4.1-flash-1017` (1). Its results describe the routed system on this run, not any single model.
 
 ---
 
@@ -81,14 +94,16 @@ The app keeps two kinds of testing separate:
 flowchart LR
     D[(Labelled cases<br/>v1 baseline · v2 held-out)] --> P[Prompt policy-v1:<br/>Policy + Action + Context]
     P --> L[🟦 Laya 0.4.2<br/>local CPU checkpoint]
+    P --> T[🟩 Jev direct<br/>TypeSafe API, jev-1.13.0]
     P --> J[🟨 Jev Router<br/>via OpenRouter, routed]
     L --> R[Decision, or a recorded<br/>failure / invalid output]
+    T --> R
     J --> R
     R --> M[📊 Accuracy · per-class P/R/F1 ·<br/>critical errors · confusion · latency · cost]
 ```
 
-- ⚖️ **Same task:** both models receive identical instructions (prompt `policy-v1`, fingerprint `66f5f32271e1`).
-- 🔒 **Constrained answers:** Laya answers a three-way choice question; Jev must return strict JSON whose decision is one of the three labels (temperature 0).
+- ⚖️ **Same task:** every system receives identical instructions (prompt `policy-v1`, fingerprint `66f5f32271e1`).
+- 🔒 **Constrained answers:** Laya and Jev direct answer the identical native choice question; Jev Router must return strict JSON whose decision is one of the three labels (temperature 0).
 - 🧊 **Held-out evaluation:** v2 was written after the prompt was frozen, and the prompt was not changed afterwards. v1 cases were visible while the prompt was written.
 - 🚫 **No hidden failures:** timeouts, API errors and unparseable outputs are recorded with their error message, never converted into a decision, and counted as incorrect.
 - 🏷️ **Ambiguous cases flagged, not guessed:** 4 v2 cases have no single defensible answer under the policy as written. They carry a review note and are never scored.
@@ -125,7 +140,7 @@ Columns: `id, business_area, scenario, policy, action, context, expected_decisio
 | 🏠 **Overview** | What is tested, the three decisions, the two kinds of testing, the latest published result |
 | 📋 **Policy dataset** | Both dataset versions, class and area counts, filters, flagged cases, CSV download |
 | ▶️ **Run benchmark** | A live benchmark run, a single-case tester, and Laya's general safety check (clearly labelled as not a policy check) |
-| 📈 **Results & error analysis** | Published vs live vs uploaded results with run metadata, headline metrics, critical errors, per-class P/R/F1, confusion matrices, Jev routing, a filterable case explorer with raw responses, and CSV/JSON downloads |
+| 📈 **Results & error analysis** | Published vs live vs uploaded results with run metadata, headline metrics, critical errors, per-class P/R/F1, confusion matrices, Jev Router routing, a filterable case explorer with raw responses, and CSV/JSON downloads |
 
 ---
 
@@ -139,17 +154,18 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Add your [OpenRouter](https://openrouter.ai/keys) key to `.env` (or to Streamlit secrets when deployed):
+Copy `.env.example` to `.env` and add your keys (on Streamlit Cloud, add them under **Secrets**). `.env` is git-ignored, and keys are never printed, logged or shown in the app.
 
 ```env
-OPENROUTER_API_KEY=sk-or-v1-...
-JEV_MODEL=typesafe/jev-router
+TYPESAFE_API_KEY=...        # Jev — direct decision model (console.typesafe.ai)
+# OPENROUTER_API_KEY=...    # optional: Jev Router
 ```
 
 ```bash
-streamlit run app.py                                         # the app
-python -m benchlab.cli --dataset v2-heldout --models Laya Jev  # a reproducible run
-pytest                                                        # scoring tests
+streamlit run app.py                                                  # the app
+pytest                                                                # offline tests, no paid calls
+python -m benchlab.cli --models "Jev Direct" --cases V2-003 --dry-run   # show a request, send nothing
+python -m benchlab.cli --dataset v2-heldout --models Laya "Jev Direct"  # full comparison run
 ```
 
 The CLI saves each run to `results/<run_id>/` (results.csv, metadata.json, raw responses). `--publish` also copies the run into `benchmarks/`.
@@ -163,7 +179,7 @@ The CLI saves each run to `results/<run_id>/` (results.csv, metadata.json, raw r
 ├── benchlab/
 │   ├── config.py          # Decisions, frozen prompt, dataset registry
 │   ├── data.py            # Dataset loading and fingerprinting
-│   ├── runners.py         # Laya and Jev calls, error handling, run metadata
+│   ├── runners.py         # Laya, Jev direct and Jev Router calls, errors, metadata
 │   ├── metrics.py         # Scoring rules and error types
 │   ├── results.py         # Published / uploaded run loading
 │   └── cli.py             # Command-line benchmark runner
@@ -177,13 +193,15 @@ The CLI saves each run to `results/<run_id>/` (results.csv, metadata.json, raw r
 
 - 🧪 Synthetic, hand-written cases; real policies are messier.
 - 📏 Small samples (48 and 60 scored cases), so differences of a few cases are not meaningful.
-- 🔀 Jev's results depend on which models it routed to at run time and may change.
-- ⏱️ Latency is indicative: Laya runs on CPU here, and Jev includes the network round trip.
+- 🔀 Jev Router's results depend on which models it routed to at run time and may change.
+- ⏱️ Latency is indicative: Laya runs on CPU here, and both Jev systems include the network round trip.
+- 💰 TypeSafe does not return a cost; Jev direct cost is estimated from reported input tokens at the documented price.
 - 🏷️ Labels were written by one author. Flagged cases show where the policy text itself is ambiguous.
 
 ## 🙏 Acknowledgements
 
 - [Laya](https://huggingface.co/convaiinnovations/laya) by ConvAI Innovations (Apache-2.0)
+- [Jev](https://docs.typesafe.ai/models) by TypeSafe, via the [TypeSafe API](https://docs.typesafe.ai/api/system-one)
 - [Jev Router](https://openrouter.ai/typesafe/jev-router) by TypeSafe, via [OpenRouter](https://openrouter.ai)
 
 ## 👩‍💻 Author

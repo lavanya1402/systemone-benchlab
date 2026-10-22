@@ -12,16 +12,17 @@ from dotenv import load_dotenv
 from benchlab import metrics
 from benchlab.config import (
     DATASETS, DECISION_INFO, DECISIONS, JEV_DEFAULT_MODEL, JEV_MAX_ATTEMPTS,
-    JEV_TIMEOUT_S, MODEL_COLORS, MODELS, NO_DECISION, PROMPT_VERSION, ROOT,
-    prompt_fingerprint,
+    JEV_TIMEOUT_S, MODEL_COLORS, MODELS, NO_DECISION, PROMPT_VERSION,
+    RAW_PREFIXES, ROOT, TYPESAFE_DEFAULT_MODEL, TYPESAFE_MAX_ATTEMPTS,
+    TYPESAFE_TIMEOUT_S, model_label, prompt_fingerprint,
 )
 from benchlab.data import dataset_sha256, load_dataset, scored_cases
 from benchlab.results import (
     NOT_RECORDED, list_published_runs, load_raw, load_run, normalize_results,
 )
 from benchlab.runners import (
-    build_metadata, laya_router, laya_version, results_frame, run_case,
-    run_cases, save_run,
+    build_metadata, estimated_cost_usd, laya_router, laya_version,
+    missing_credential, results_frame, run_case, run_cases, save_run,
 )
 
 st.set_page_config(
@@ -42,8 +43,27 @@ def secret(name, default=None):
         return default
 
 
-API_KEY = secret("OPENROUTER_API_KEY")
-JEV_MODEL = secret("JEV_MODEL", JEV_DEFAULT_MODEL)
+# Keys are read from .env locally or Streamlit secrets when deployed. They
+# are passed to the runners only and never displayed.
+SETTINGS = {
+    "typesafe_api_key": secret("TYPESAFE_API_KEY"),
+    "jev_direct_model": secret("TYPESAFE_MODEL", TYPESAFE_DEFAULT_MODEL),
+    "openrouter_api_key": secret("OPENROUTER_API_KEY"),
+    "jev_router_model": secret("JEV_MODEL", JEV_DEFAULT_MODEL),
+}
+# Jev Router is kept for comparison with the historical runs; the default
+# live comparison is Laya against Jev direct.
+DEFAULT_RUN_MODELS = ["Laya", "Jev Direct"]
+MODEL_BY_LABEL = {model_label(m): m for m in MODELS}
+
+
+def credential_warning(model_name):
+    missing = missing_credential(model_name, SETTINGS)
+    if missing:
+        st.warning(f"{model_label(model_name)} needs `{missing}` in `.env` "
+                   "(local) or Streamlit secrets (deployed), so it will be "
+                   "skipped.", icon=":material/key_off:")
+    return missing
 DATASET_BY_TITLE = {spec["title"]: version
                     for version, spec in DATASETS.items()}
 DISCLAIMER = ("Results apply to this dataset and run; they do not establish "
@@ -57,12 +77,15 @@ METRIC_HELP = {
                  "BLOCK, so each decision type counts equally. Ranges 0 to 1."),
     "latency": ("Median time per successful request, excluding each model's "
                 "first request, which can include loading. Laya runs on local "
-                "CPU; Jev includes the network round trip."),
+                "CPU; Jev and Jev Router include the network round trip."),
     "failed": ("Requests that timed out or returned an API or network error. "
                "Recorded, never converted into a decision."),
     "invalid": ("Responses that could not be parsed into one of the three "
                 "decisions. Recorded, never converted into a decision."),
     "cost": "Cost reported by OpenRouter for this run.",
+    "estimated_cost": ("TypeSafe does not return a cost. Estimated from the "
+                       "reported input tokens at the documented $0.042 per "
+                       "million input tokens; output tokens are free."),
 }
 
 
@@ -89,6 +112,16 @@ def show(value):
     if isinstance(value, dict):
         return "; ".join(f"{k}: {v}" for k, v in value.items())
     return str(value)
+
+
+def confidence_note(model_name, value):
+    note = (f"{model_label(model_name)}-reported confidence for its answer: "
+            f"{value:.2f}. This is the model's own estimate, not a measure of "
+            "accuracy.")
+    if model_name == "Laya":
+        note += (" Laya's checkpoint warns about invalid temperatures, so "
+                 "treat it as uncalibrated.")
+    return note
 
 
 def decision_badge(label):
@@ -121,12 +154,16 @@ def join_cases(results, dataset_version):
 
 def model_identity(model_name, rows, meta):
     served = sorted(set(rows["served_by"]) - {""})
-    if model_name == "Jev":
-        requested = (meta.get("models", {}).get("Jev", {})
-                     .get("requested_model") or show(sorted(set(rows["model_id"]) - {""})))
-        return (f"Routed system · requested `{requested}` · answered by "
-                f"{len(served) or 'an unrecorded number of'} underlying "
-                f"model{'s' if len(served) != 1 else ''} on this run")
+    requested = (meta.get("models", {}).get(model_name, {})
+                 .get("requested_model")
+                 or show(sorted(set(rows["model_id"]) - {""})))
+    if model_name == "Jev Router":
+        return (f"Routed system via OpenRouter · requested `{requested}` · "
+                f"answered by {len(served) or 'an unrecorded number of'} "
+                f"underlying model{'s' if len(served) != 1 else ''} on this run")
+    if model_name == "Jev Direct":
+        return (f"TypeSafe decision API · requested `{requested}` · answered "
+                f"by {show(served)}")
     return f"Local checkpoint · served by {show(served)}"
 
 
@@ -136,7 +173,7 @@ def headline_metrics(results, meta, compact=False):
         rows = results[results["model"].eq(model_name)]
         summary = metrics.summary(rows)
         with column.container(border=True):
-            st.markdown(f"#### {model_name}")
+            st.markdown(f"#### {model_label(model_name)}")
             st.caption(model_identity(model_name, rows, meta))
             left, right = st.columns(2)
             left.metric("Accuracy", f"{summary['accuracy']:.1%}",
@@ -162,6 +199,12 @@ def headline_metrics(results, meta, compact=False):
             if summary["total_cost_usd"] is not None:
                 right.metric("Cost", f"${summary['total_cost_usd']:.6f}",
                              help=METRIC_HELP["cost"])
+            elif model_name == "Jev Direct":
+                estimate = estimated_cost_usd(rows)
+                right.metric("Estimated cost",
+                             "Unavailable" if estimate is None
+                             else f"${estimate:.6f}",
+                             help=METRIC_HELP["estimated_cost"])
 
 
 def metadata_table(meta):
@@ -179,19 +222,25 @@ def metadata_table(meta):
         ("Prompt fingerprint", prompt.get("fingerprint")),
     ]
     for model_name, info in meta.get("models", {}).items():
+        name = model_label(model_name)
         rows += [
-            (f"{model_name}: system", info.get("system")),
-            (f"{model_name}: requested model", info.get("requested_model")),
-            (f"{model_name}: package version", info.get("package_version")),
-            (f"{model_name}: answered by", info.get("served_by")),
-            (f"{model_name}: providers", info.get("providers")),
-            (f"{model_name}: settings", info.get("settings")),
+            (f"{name}: system", info.get("system")),
+            (f"{name}: requested model", info.get("requested_model")),
+            (f"{name}: package version", info.get("package_version")),
+            (f"{name}: answered by", info.get("served_by")),
+            (f"{name}: endpoint", info.get("endpoint")),
+            (f"{name}: providers", info.get("providers")),
+            (f"{name}: settings", info.get("settings")),
+            (f"{name}: cost", info.get("cost")),
         ]
     rows.append(("App commit", meta.get("app_commit")))
+    # Fields that do not apply to a system are omitted, not "Not recorded".
+    optional = ("requested model", "package version", "endpoint",
+                "providers", "cost")
     table = pd.DataFrame(
         [(field, show(value)) for field, value in rows
-         if not (value is None and ": " in field and field.split(": ")[1] in
-                 ("requested model", "package version", "providers"))],
+         if not (value is None and ": " in field
+                 and field.rsplit(": ", 1)[1] in optional)],
         columns=["Field", "Value"],
     )
     st.table(table, hide_index=True, alt="Run metadata")
@@ -201,13 +250,15 @@ def metadata_table(meta):
 
 def recall_chart(results):
     rows = []
-    for model_name in [m for m in MODELS if m in set(results["model"])]:
+    present = [m for m in MODELS if m in set(results["model"])]
+    for model_name in present:
         table = metrics.per_class(results[results["model"].eq(model_name)])
-        table["model"] = model_name
+        table["model"] = model_label(model_name)
         rows.append(table)
     data = pd.concat(rows)
     data["label"] = data["recall"].map("{:.0%}".format)
-    domain = [m for m in MODELS if m in set(data["model"])]
+    domain = [model_label(m) for m in present]
+    colors = [MODEL_COLORS[m] for m in present]
     base = alt.Chart(data).encode(
         x=alt.X("decision:N", sort=DECISIONS, title="Expected decision",
                 axis=alt.Axis(labelAngle=0)),
@@ -223,7 +274,7 @@ def recall_chart(results):
         y=alt.Y("recall:Q", title="Recall (share answered correctly)",
                 scale=alt.Scale(domain=[0, 1]), axis=alt.Axis(format="%")),
         color=alt.Color("model:N", title="Model", scale=alt.Scale(
-            domain=domain, range=[MODEL_COLORS[m] for m in domain])),
+            domain=domain, range=colors)),
     )
     labels = base.mark_text(dy=-8, color="#0F1E3D").encode(
         y="recall:Q", text="label:N")
@@ -314,7 +365,7 @@ def render_results(results, meta, raw_lookup):
                              "What it means": list(meanings.values())})
     for model_name in models:
         table = metrics.critical_errors(joined[joined["model"].eq(model_name)])
-        critical[model_name] = [
+        critical[model_label(model_name)] = [
             f"{r['count']} of {r['denominator']}"
             + (f" ({r['rate']:.0%})" if r["rate"] is not None else "")
             for r in table.to_dict("records")
@@ -332,7 +383,7 @@ def render_results(results, meta, raw_lookup):
     per_class = []
     for model_name in models:
         table = metrics.per_class(joined[joined["model"].eq(model_name)])
-        table.insert(0, "model", model_name)
+        table.insert(0, "model", model_label(model_name))
         per_class.append(table)
     st.dataframe(
         pd.concat(per_class), hide_index=True,
@@ -352,19 +403,20 @@ def render_results(results, meta, raw_lookup):
                "failed or the output was invalid.")
     for column, model_name in zip(st.columns(len(models)), models):
         with column:
-            st.markdown(f"**{model_name}**")
+            st.markdown(f"**{model_label(model_name)}**")
             st.altair_chart(
                 confusion_chart(joined[joined["model"].eq(model_name)]),
-                alt=f"{model_name} confusion matrix of expected versus "
-                    "predicted decisions",
+                alt=f"{model_label(model_name)} confusion matrix of expected "
+                    "versus predicted decisions",
             )
 
-    if "Jev" in models:
-        st.subheader("Where Jev routed requests")
-        st.caption("Jev Router is a routed system, not a single fixed model. "
-                   "Each request can be answered by a different underlying "
-                   "model, so results describe the routed system on this run.")
-        jev = joined[joined["model"].eq("Jev")].copy()
+    if "Jev Router" in models:
+        st.subheader("Where Jev Router routed requests")
+        st.caption("Jev Router (typesafe/jev-router on OpenRouter) is a "
+                   "routed system, not the direct Jev decision model. Each "
+                   "request can be answered by a different underlying model, "
+                   "so results describe the routed system on this run.")
+        jev = joined[joined["model"].eq("Jev Router")].copy()
         jev["served_by"] = jev["served_by"].replace("", NOT_RECORDED)
         jev["provider"] = jev["provider"].replace("", NOT_RECORDED)
         jev["correct"] = jev["error_type"].eq(metrics.CORRECT)
@@ -372,7 +424,7 @@ def render_results(results, meta, raw_lookup):
                    .agg(requests=("id", "count"), correct=("correct", "sum"))
                    .reset_index().sort_values("requests", ascending=False))
         st.dataframe(routing, hide_index=True,
-                     alt="Number of Jev requests answered by each model",
+                     alt="Number of Jev Router requests answered by each model",
                      column_config={"served_by": "Answered by",
                                     "provider": "Provider",
                                     "requests": "Requests",
@@ -381,7 +433,9 @@ def render_results(results, meta, raw_lookup):
     st.subheader("Case explorer")
     filters = st.columns(5)
     areas = sorted(set(joined["business_area"]) - {""})
-    pick_models = filters[0].multiselect("Model", models, default=models)
+    joined["system"] = joined["model"].map(model_label)
+    labels = [model_label(m) for m in models]
+    pick_models = filters[0].multiselect("Model", labels, default=labels)
     pick_expected = filters[1].multiselect("Expected decision", DECISIONS)
     pick_actual = filters[2].multiselect("Predicted decision",
                                          DECISIONS + [NO_DECISION])
@@ -393,7 +447,7 @@ def render_results(results, meta, raw_lookup):
         or present_errors,
     )
     pick_areas = filters[4].multiselect("Business area", areas)
-    view = joined[joined["model"].isin(pick_models)]
+    view = joined[joined["system"].isin(pick_models)]
     if pick_expected:
         view = view[view["expected_decision"].isin(pick_expected)]
     if pick_actual:
@@ -403,7 +457,7 @@ def render_results(results, meta, raw_lookup):
     if pick_areas:
         view = view[view["business_area"].isin(pick_areas)]
 
-    columns = ["id", "model", "business_area", "policy", "action", "context",
+    columns = ["id", "system", "business_area", "policy", "action", "context",
                "expected_decision", "actual_decision", "error_type",
                "served_by"]
     # Explanations are shown only when a model actually returned them.
@@ -414,7 +468,7 @@ def render_results(results, meta, raw_lookup):
         on_select="rerun", selection_mode="single-row",
         alt="Benchmark cases with policy, action, context and both answers",
         column_config={
-            "id": "Case", "model": "Model", "business_area": "Area",
+            "id": "Case", "system": "Model", "business_area": "Area",
             "policy": st.column_config.TextColumn("Policy", width="large"),
             "action": st.column_config.TextColumn("Proposed action", width="medium"),
             "context": st.column_config.TextColumn("Context", width="medium"),
@@ -428,7 +482,7 @@ def render_results(results, meta, raw_lookup):
     if event.selection.rows and event.selection.rows[0] < len(view):
         row = view.iloc[event.selection.rows[0]]
         with st.container(border=True):
-            st.markdown(f"**Case {row['id']} · {row['model']}** · "
+            st.markdown(f"**Case {row['id']} · {row['system']}** · "
                         f"{row['business_area'] or 'No area recorded'}")
             st.markdown(f"**Policy:** {row['policy'] or NOT_RECORDED}")
             st.markdown(f"**Proposed action:** {row['action'] or NOT_RECORDED}")
@@ -445,17 +499,16 @@ def render_results(results, meta, raw_lookup):
             if row["error"]:
                 st.error(f"{row['status']}: {row['error']}")
             with st.expander("Technical details", icon=":material/code:"):
-                st.markdown(f"Status: `{row['status']}` · Answered by: "
+                tokens = row["input_tokens"]
+                st.markdown(f"Status: `{row['status']}` · Model ID: "
+                            f"{show(row['model_id'])} · Answered by: "
                             f"{show(row['served_by'])} · Provider: "
                             f"{show(row['provider'])} · Latency: "
-                            f"{show(row['latency_ms'])} ms")
+                            f"{show(row['latency_ms'])} ms · Input tokens: "
+                            f"{NOT_RECORDED if pd.isna(tokens) else int(tokens)}")
                 if pd.notna(row["reported_confidence"]):
-                    st.caption(
-                        "Laya-reported confidence for its answer: "
-                        f"{row['reported_confidence']:.2f}. This is the "
-                        "model's own uncalibrated estimate, not a measure "
-                        "of accuracy."
-                    )
+                    st.caption(confidence_note(row["model"],
+                                               row["reported_confidence"]))
                 if row["warnings"]:
                     st.warning(row["warnings"])
                 if row["raw_output"]:
@@ -490,7 +543,8 @@ def render_results(results, meta, raw_lookup):
 # ---------------------------------------------------------------- page
 
 st.title("SystemOne BenchLab", icon=":material/balance:")
-st.markdown(":yellow-badge[Lavanya AI Consultancy] Jev vs Laya · "
+st.markdown(":yellow-badge[Lavanya AI Consultancy] Jev — direct decision "
+            "model vs Laya · "
             "Agent action governance")
 
 overview_tab, dataset_tab, run_tab, results_tab = st.tabs([
@@ -522,8 +576,8 @@ with overview_tab:
         st.markdown(
             "Each model receives a written policy, a proposed action and its "
             "context, and must return ALLOW, REQUIRE_APPROVAL or BLOCK. "
-            "Answers are compared with a labelled correct decision. Laya and "
-            "Jev receive identical instructions."
+            "Answers are compared with a labelled correct decision. Every "
+            "system receives identical instructions."
         )
     with right.container(border=True, height="stretch"):
         st.markdown("**General safety check** :gray-badge[Laya only]")
@@ -533,6 +587,23 @@ with overview_tab:
             "or apply a business policy, so these scores are not a measure "
             "of policy compliance."
         )
+
+    st.subheader("The systems compared")
+    systems = st.columns(3)
+    with systems[0].container(border=True, height="stretch"):
+        st.markdown(f"**{model_label('Laya')}**")
+        st.markdown("Open-source local checkpoint, run on CPU. Answers the "
+                    "decision as a native choice question.")
+    with systems[1].container(border=True, height="stretch"):
+        st.markdown(f"**{model_label('Jev Direct')}**")
+        st.markdown("TypeSafe's own Jev model through its System One API. "
+                    "Answers the identical choice question; no LLM is "
+                    "involved.")
+    with systems[2].container(border=True, height="stretch"):
+        st.markdown(f"**{model_label('Jev Router')}**")
+        st.markdown("`typesafe/jev-router` on OpenRouter, which routes each "
+                    "request to an underlying LLM. Used by the earlier "
+                    "published runs; not the direct Jev model.")
 
     headline = next((item for item in published_runs
                      if item[1]["dataset"]["version"] == "v2-heldout"),
@@ -547,19 +618,24 @@ with overview_tab:
 
     st.subheader("How the comparison is kept fair")
     st.markdown(
-        f"- **Same task:** both models get the same instructions and decision "
-        f"criteria (prompt `{PROMPT_VERSION}`, fingerprint "
+        f"- **Same task:** every system gets the same instructions and "
+        f"decision criteria (prompt `{PROMPT_VERSION}`, fingerprint "
         f"`{prompt_fingerprint()}`).\n"
-        "- **Constrained answers:** Laya answers a three-way choice question; "
-        "Jev must return JSON whose decision is one of the three labels.\n"
+        "- **Only the case text is sent:** policy, proposed action and "
+        "context. Case IDs, expected answers, scenarios and review notes "
+        "never reach a model.\n"
+        "- **Constrained answers:** Laya and Jev direct answer the identical "
+        "native choice question; Jev Router must return JSON whose decision "
+        "is one of the three labels.\n"
         "- **Held-out data:** the v2 set was written after the prompt was "
         "frozen, and the prompt was not changed afterwards.\n"
         "- **No hidden failures:** timeouts, API errors and unparseable "
         "outputs are recorded and counted as incorrect.\n"
         "- **Ambiguous cases are flagged, not guessed:** cases without one "
         "defensible answer are excluded from scoring.\n"
-        "- **Jev is routed:** each request may be answered by a different "
-        "underlying model, and the model used is recorded per request.\n"
+        "- **What answered is recorded:** the model version that answered "
+        "each request is stored. Jev Router may use a different underlying "
+        "model per request.\n"
         "- **Nothing simulated:** every number comes from a real run."
     )
     with st.expander("Limitations", icon=":material/warning:"):
@@ -568,12 +644,12 @@ with overview_tab:
             "messier.\n"
             "- Sample sizes are small (48 and 60 scored cases), so differences "
             "of a few cases are not meaningful.\n"
-            "- Jev's results depend on which models it routed to at run time "
-            "and may change over time.\n"
+            "- Jev Router's results depend on which models it routed to at "
+            "run time and may change over time.\n"
             "- Laya's checkpoint warns that some of its temperatures are "
             "invalid, so its reported confidence is uncalibrated.\n"
-            "- Latency is indicative only: Laya runs on CPU here, and Jev "
-            "includes the network round trip."
+            "- Latency is indicative only: Laya runs on CPU here, while both "
+            "Jev systems include the network round trip."
         )
 
 with dataset_tab:
@@ -664,21 +740,31 @@ with run_tab:
         left, right = st.columns(2)
         run_version = DATASET_BY_TITLE[left.selectbox(
             "Dataset", list(DATASET_BY_TITLE), key="run_dataset")]
-        run_models = right.pills("Models", MODELS, selection_mode="multi",
-                                 default=MODELS, key="run_models")
-        if "Jev" in run_models and not API_KEY:
-            st.warning("Jev needs OPENROUTER_API_KEY in Streamlit secrets or "
-                       ".env, so it will be skipped.",
-                       icon=":material/key_off:")
+        run_models = [MODEL_BY_LABEL[label] for label in right.pills(
+            "Models", list(MODEL_BY_LABEL), selection_mode="multi",
+            default=[model_label(m) for m in DEFAULT_RUN_MODELS],
+            key="run_models")]
+        for model_name in run_models:
+            credential_warning(model_name)
         with st.expander("Run settings", icon=":material/tune:"):
             st.table(pd.DataFrame([
                 ("Prompt version", f"{PROMPT_VERSION} "
                                    f"(fingerprint {prompt_fingerprint()})"),
-                ("Laya", f"laya {show(laya_version())} · local CPU · "
-                         "language en · checkpoint chosen automatically"),
-                ("Jev", f"{JEV_MODEL} (routed system) · temperature 0 · "
-                        f"strict JSON schema · timeout {JEV_TIMEOUT_S} s · "
-                        f"up to {JEV_MAX_ATTEMPTS - 1} retries on HTTP 429"),
+                ("Sent to every model", "Policy, proposed action and context "
+                                        "only"),
+                (model_label("Laya"),
+                 f"laya {show(laya_version())} · local CPU · language en · "
+                 "checkpoint chosen automatically"),
+                (model_label("Jev Direct"),
+                 f"{SETTINGS['jev_direct_model']} · TypeSafe System One API · "
+                 f"native choice question · timeout {TYPESAFE_TIMEOUT_S} s · "
+                 f"up to {TYPESAFE_MAX_ATTEMPTS - 1} retries on HTTP 429/529 · "
+                 "$0.042 per million input tokens (documented)"),
+                (model_label("Jev Router"),
+                 f"{SETTINGS['jev_router_model']} via OpenRouter (routed) · "
+                 f"temperature 0 · strict JSON schema · timeout "
+                 f"{JEV_TIMEOUT_S} s · up to {JEV_MAX_ATTEMPTS - 1} retries "
+                 "on HTTP 429"),
             ], columns=["Setting", "Value"]), hide_index=True,
                 alt="Settings used for a live run")
             st.caption("Laya's first request downloads and loads its "
@@ -690,26 +776,28 @@ with run_tab:
     if start:
         run_cases_df = scored_cases(cached_dataset(run_version))
         total = len(cached_dataset(run_version))
-        to_run = [m for m in run_models if m != "Jev" or API_KEY]
+        to_run = [m for m in run_models
+                  if not missing_credential(m, SETTINGS)]
         started = datetime.now(timezone.utc)
         run_id = f"{run_version}_{started:%Y%m%dT%H%M%SZ}"
         rows, raws = [], {}
         with st.status(f"Running {len(run_cases_df)} cases",
                        expanded=True) as status:
             for model_name in to_run:
-                bar = st.progress(0.0, text=f"{model_name}: starting")
+                name = model_label(model_name)
+                bar = st.progress(0.0, text=f"{name}: starting")
 
-                def on_row(index, row, bar=bar, model_name=model_name):
+                def on_row(index, row, bar=bar, name=name):
                     bar.progress(
                         (index + 1) / len(run_cases_df),
-                        text=f"{model_name}: case {index + 1} of "
+                        text=f"{name}: case {index + 1} of "
                              f"{len(run_cases_df)} · {row['id']} · "
                              f"{row['status']}",
                     )
 
                 model_rows, model_raws = run_cases(
                     model_name, run_cases_df, on_row=on_row,
-                    api_key=API_KEY, jev_model=JEV_MODEL,
+                    settings=SETTINGS,
                 )
                 rows += model_rows
                 raws.update(model_raws)
@@ -722,7 +810,7 @@ with run_tab:
                     timespec="seconds"),
                 cases_run=len(run_cases_df),
                 flagged_skipped=total - len(run_cases_df),
-                jev_model=JEV_MODEL,
+                settings=SETTINGS,
             )
             save_run(ROOT / "results" / run_id, live_results, live_meta, raws)
             status.update(label="Run complete", state="complete",
@@ -746,8 +834,10 @@ with run_tab:
             "Policy", "Customer record deletion requires human approval.")
         action = st.text_area("Proposed action", "Delete customer records.")
         context = st.text_area("Context", "No human approval has been given.")
-        case_models = st.pills("Models", MODELS, selection_mode="multi",
-                               default=MODELS, key="case_models")
+        case_models = [MODEL_BY_LABEL[label] for label in st.pills(
+            "Models", list(MODEL_BY_LABEL), selection_mode="multi",
+            default=[model_label(m) for m in DEFAULT_RUN_MODELS],
+            key="case_models")]
         submitted = st.form_submit_button("Get decisions",
                                           icon=":material/gavel:")
     if submitted and case_models:
@@ -756,13 +846,12 @@ with run_tab:
         for column, model_name in zip(st.columns(len(case_models)),
                                       case_models):
             with column.container(border=True):
-                st.markdown(f"**{model_name}**")
-                if model_name == "Jev" and not API_KEY:
-                    st.warning("OPENROUTER_API_KEY is not configured.")
+                st.markdown(f"**{model_label(model_name)}**")
+                if credential_warning(model_name):
                     continue
-                with st.spinner(f"Asking {model_name}"):
+                with st.spinner(f"Asking {model_label(model_name)}"):
                     row, raw = run_case(model_name, case, phase="subsequent",
-                                        api_key=API_KEY, jev_model=JEV_MODEL)
+                                        settings=SETTINGS)
                 if row["status"] == "ok":
                     decision_badge(row["predicted_decision"])
                 else:
@@ -775,10 +864,8 @@ with run_tab:
                     st.warning(row["warnings"])
                 with st.expander("Technical details", icon=":material/code:"):
                     if row["reported_confidence"] is not None:
-                        st.caption(
-                            "Laya-reported confidence: "
-                            f"{row['reported_confidence']:.2f} "
-                            "(uncalibrated; not a measure of accuracy)")
+                        st.caption(confidence_note(
+                            model_name, row["reported_confidence"]))
                     if row["raw_output"]:
                         st.code(row["raw_output"], language=None)
                     st.json(raw if raw is not None else {}, expanded=False)
@@ -865,7 +952,7 @@ with results_tab:
         live = st.session_state["live_run"]
         render_results(live["results"], live["metadata"],
                        lambda model, case_id: live["raws"].get(
-                           f"{model.lower()}_{case_id}"))
+                           f"{RAW_PREFIXES[model][0]}_{case_id}"))
     elif choice == "upload":
         uploaded = st.file_uploader("Results CSV", type=["csv"])
         st.caption("Required columns: id, model, expected_decision, "
