@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        # The Laya model and torch are only needed for live runs, not for tests.
+        run: pip install httpx pandas scikit-learn python-dotenv pytest ruff==0.16.9
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: python -m pytest -q

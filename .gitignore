@@ -8,3 +8,6 @@ laya-error.txt
 
 # Local scratch files
 laya-*.txt
+.env
+.ruff_cache/
+venv/

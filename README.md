@@ -229,6 +229,10 @@ Before the direct Jev API was connected, two runs compared Laya with **Jev Route
 - [Laya](https://huggingface.co/convaiinnovations/laya) by ConvAI Innovations (Apache-2.0)
 - [Jev](https://docs.typesafe.ai/models) by TypeSafe, via the [TypeSafe API](https://docs.typesafe.ai/api/system-one)
 
+## 📄 License
+
+MIT, see [LICENSE](LICENSE).
+
 ## 👩‍💻 Author
 
 **Lavanya Srivastava** · Lavanya AI Consultancy · [GitHub @lavanya1402](https://github.com/lavanya1402)
